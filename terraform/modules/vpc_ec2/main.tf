@@ -1,21 +1,21 @@
 data "aws_ami" "ubuntu" {
   filter {
     name   = "image-id"
-    values = ["ami-0b6d9d3d33ba97d99"] 
+    values = ["ami-0b6d9d3d33ba97d99"]
   }
 }
 
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
-  tags = { Name = "${var.env}-vpc" }
+  tags                 = { Name = "${var.env}-vpc" }
 }
 
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.subnet_cidr
   map_public_ip_on_launch = true
-  tags = { Name = "${var.env}-public-subnet" }
+  tags                    = { Name = "${var.env}-public-subnet" }
 }
 
 resource "aws_internet_gateway" "gw" {

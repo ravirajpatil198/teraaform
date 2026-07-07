@@ -7,9 +7,9 @@ terraform {
     }
   }
   backend "s3" {
-    bucket         = "terrafrom-bucket-project" # Change this
-    key            = "infrastructure/state.tfstate"
-    region         = "us-east-1"
+    bucket       = "terrafrom-bucket-project" # Change this
+    key          = "infrastructure/state.tfstate"
+    region       = "us-east-1"
     use_lockfile = true
   }
 }
