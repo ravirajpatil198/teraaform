@@ -1,0 +1,95 @@
+pipeline {
+    agent any
+    
+    parameters {
+        choice(name: 'ENVIRONMENT', choices: ['dev', 'test', 'prod'], description: 'Select deployment target environment')
+        choice(name: 'ACTION', choices: ['apply', 'destroy'], description: 'Choose action to perform')
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                cleanWs()
+                checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[credentialsId: 'terra-jenkins', url: 'https://github.com/ravirajpatil198/teraaform.git']])
+            }
+        }
+        
+        stage('Format & Lint Check') {
+            steps {
+                dir('terraform') {
+                    sh 'terraform fmt -check'
+                }
+            }
+        }
+        
+        stage('Terraform Init') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws cread']]) {
+                    dir('terraform') {
+                        sh 'terraform init -no-color'
+                        sh "terraform workspace select -or-create ${params.ENVIRONMENT}"
+                    }
+                }
+            }
+        }
+        
+        stage('Terraform Plan') {
+            when { expression { params.ACTION == 'apply' } }
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws cread']]) {
+                    dir('terraform') {
+                        sh "terraform plan -no-color -lock-timeout=3m -out=${params.ENVIRONMENT}.tfplan"
+                        sh "terraform show -no-color ${params.ENVIRONMENT}.tfplan > plan.txt"
+                    }
+                }
+                archiveArtifacts artifacts: 'terraform/plan.txt', fingerprint: true
+            }
+        }
+        
+        stage('Manual Gates') {
+            input {
+                message "Proceed with execution of [${params.ACTION}] on environment [${params.ENVIRONMENT}]?"
+                ok "Confirm Execution"
+            }
+            steps {
+                echo "Action Authorized."
+            }
+        }
+        
+        stage('Execution Phase') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws cread']]) {
+                    dir('terraform') {
+                        script {
+                            if (params.ACTION == 'apply') {
+                                sh "terraform apply -no-color -lock-timeout=3m -auto-approve ${params.ENVIRONMENT}.tfplan"
+                                sh 'terraform output'
+                            } else if (params.ACTION == 'destroy') {
+                                sh "terraform destroy -no-color -lock-timeout=3m -auto-approve"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    post {
+        success {
+            emailext (
+                to: 'patilraviraj198@gmail.com',
+                subject: "SUCCESSFUL: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+                body: "Pipeline completed successfully. Action: ${params.ACTION} on ${params.ENVIRONMENT}.",
+                recipientProviders: [[$class: 'DevelopersRecipientProvider']]
+            )
+        }
+        failure {
+            emailext (
+                to: 'patilraviraj198@gmail.com',
+                subject: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+                body: "Pipeline Execution encountered errors. Review build logs at ${env.BUILD_URL}",
+                recipientProviders: [[$class: 'DevelopersRecipientProvider']]
+            )
+        }
+    }
+    
+}
