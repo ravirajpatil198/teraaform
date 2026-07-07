@@ -7,10 +7,10 @@ terraform {
     }
   }
   backend "s3" {
-    bucket         = "your-global-terraform-state-bucket" # Change this
+    bucket         = "terrafrom-bucket-project" # Change this
     key            = "infrastructure/state.tfstate"
     region         = "us-east-1"
-    dynamodb_table = "terraform-lock-table"
+    use_lockfile = true
   }
 }
 
