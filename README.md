@@ -1,19 +1,35 @@
 # Multi-Environment Terraform Jenkins CI/CD Pipeline
-##  Architecture Diagram
-terraform-jenkins-project/
-├── .gitignore
-├── Jenkinsfile
-├── README.md
-└── terraform/
-    ├── backend.tf
-    ├── main.tf
-    ├── variables.tf
-    ├── outputs.tf
-    └── modules/
-        └── vpc_ec2/
-            ├── main.tf
-            ├── variables.tf
-            └── outputs.tf
+## 📐 Architecture Diagram
+
+```text
+                           +------------------------+
+                           |  GitHub Repository     |
+                           |  (Jenkinsfile & .tf)   |
+                           +-----------┬------------+
+                                       │
+                                       ▼ 
+                           +------------------------+
+                           |  Jenkins Server Node   |
+                           |  (Pipeline Controller) |
+                           +-----------┬------------+
+                                       │
+         ┌─────────────────────────────┼─────────────────────────────┐
+         ▼                             ▼                             ▼
++-----------------+           +-----------------+           +-----------------+
+| Workspace: dev  |           | Workspace: test |           | Workspace: prod |
++--------┬--------+           +--------┬--------+           +--------┬--------+
+         │                             │                             │
+         ▼ (tfplan)                    ▼ (tfplan)                    ▼ (tfplan)
++-----------------+           +-----------------+           +-----------------+
+| Manual Approval |           | Manual Approval |           | Manual Approval |
++--------┬--------+           +--------┬--------+           +--------┬--------+
+         │                             │                             │
+         ▼ (Apply)                     ▼ (Apply)                     ▼ (Apply)
++-----------------+           +-----------------+           +-----------------+
+| AWS dev VPC     |           | AWS test VPC    |           | AWS prod VPC    |
+| - t2.micro EC2  |           | - t2.micro EC2  |           | - t2.micro EC2  |
+| - Subnets (1a)  |           | - Subnets (1a)  |           | - Subnets (1a)  |
++-----------------+           +-----------------+           +-----------------+
 
 
 # Setup Instructions
